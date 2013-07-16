@@ -98,7 +98,8 @@ handle_call({propose, Operation}, From, #state{replicas = Replicas} = State) ->
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_cast(Msg, State) ->
-    receiver ! Msg,
+    ?LINFO("Received ~p", [Msg]),
+%%%    receiver ! Msg,
     {noreply, State}.
 
 %% --------------------------------------------------------------------

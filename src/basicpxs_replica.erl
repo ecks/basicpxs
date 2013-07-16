@@ -22,7 +22,7 @@
 -record(state, {
             % Set of leaders participating
             leaders = [],
-            
+            state_machine,
             % Transaction log that is served to the client, using lists to keep
             % it simple; replace with O(1) looking data structure for
             % performance
@@ -72,7 +72,9 @@ get_leaders(Pid) ->
 %% --------------------------------------------------------------------
 init([Leaders]) ->
     ?LINFO("START::Replica:~p", [self()]),
-    {ok, #state{leaders = Leaders}}.
+    {ok, State_Machine_Pid} = simple_state_machine:start_link(),
+    ?LINFO("START::State Machine:~p", [State_Machine_Pid]),
+    {ok, #state{leaders = Leaders, state_machine = State_Machine_Pid}}.
 
 %% --------------------------------------------------------------------
 %% Get list of leaders avaiable to the client
@@ -182,12 +184,18 @@ propose(Proposal, #state{proposals = Proposals, decisions = Decisions,
             State
     end.
 
-perform({CNode, Cid, Operation}, #state{slot_num = CurrSlot, 
+perform({CNode, Cid, Operation}, #state{state_machine = State_Machine, slot_num = CurrSlot, 
                                         tlog = TLog} = State) ->
-    {Result, NewTLog} = Operation(TLog),
-    Response = {reponse, {Cid, Result}},
+%%    {Result, NewTLog} = Operation(TLog),
+    ?LINFO("Operation: ~p~n", [Operation]),
+    Message = {hello, Operation},
+%%    _Num1 = gen_server:call(State_Machine, Message),
+%%    _Num2 = gen_server:call(State_Machine, Message),
+    Num3 = gen_server:call(State_Machine, Message),
+    ?LINFO("State Machine Result: ~p ~n", [Num3]),
+    Response = {reponse, {Cid, Num3}},
     gen_server:cast(CNode, Response),
-    State#state{tlog = NewTLog, slot_num = CurrSlot + 1}.
+    State#state{tlog = TLog, slot_num = CurrSlot + 1}.
     
 check_decisions(#state{proposals = Proposals, decisions = Decisions,
                        slot_num = CurrSlot} = State) ->

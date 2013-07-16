@@ -51,7 +51,7 @@ receiver(Count) ->
 %%-------------------------------------------------------------------
 
 basicpxs_test_() ->
-    {timeout, 60,
+    {inorder,
      {setup,
       fun app_start/0,
       fun app_stop/1,
@@ -65,7 +65,7 @@ simple_run() ->
     % Start all the processes and update their state
     % Note: Order is important
     Acceptors = spawn_procs(acceptor, 3, null),
-    Replicas = spawn_procs(replica, 1, []),
+    Replicas = spawn_procs(replica, 3, []),
     Leaders = spawn_procs(leader, 1, {Acceptors, Replicas}),
     basicpxs_client:start_link([]),
     
@@ -74,12 +74,17 @@ simple_run() ->
     multi_exec(basicpxs_replica, set_leaders, Leaders, Replicas),
 
     Value = 10,
-    Operation = fun(TLog) ->
+    _Operation = fun(TLog) ->
                         NewTLog = [Value|TLog],
                         {success, NewTLog}
                 end,
 
-    ?debugFmt("Result: ~p ~n", [basicpxs_client:propose(Operation)]),
+%%    ?debugFmt("Result: ~p ~n", [basicpxs_client:propose(Operation)]),
+%%    ?debugFmt("Result: ~p ~n", [basicpxs_client:propose(Value)]),
+    timer:sleep(5000),
+    ?debugMsg("Sending value"),
+    {ok,S} = gen_tcp:connect({127,0,0,1},7000,[{packet,2}]),
+    gen_tcp:send(S,value),
     
     timer:sleep(5000),
     
